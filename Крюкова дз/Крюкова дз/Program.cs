@@ -19,40 +19,52 @@ namespace ConsoleApp1
             Console.WriteLine("ЭТАП 1: Запуск всех методов (с запасом времени)");
 
             using var ctsSuccess = new CancellationTokenSource();
-            ctsSuccess.CancelAfter(10000);
+            ctsSuccess.CancelAfter(30000);//источник токена
 
             //Синхронный метод
             var sw = Stopwatch.StartNew();
-            string syncWord = FindLongestWordSync(folder);
+            string syncWord = "";
+            for (int i=0;i<100;i++)
+            {
+                syncWord = FindLongestWordSync(folder);
+            }
             sw.Stop();
-            Console.WriteLine($"Синхронный: {sw.ElapsedMilliseconds} мс, слово \"{syncWord}\"");
+            Console.WriteLine($"Синхронный (100 раз): {sw.ElapsedMilliseconds} мс, слово \"{syncWord}\"");
 
             //Асинхронный последовательный метод
             sw.Restart();
             try
             {
-                string seqWord = await FindLongestWordSequentialAsync(folder, ctsSuccess.Token);
+                string seqWord = "";
+                for (int i=0;i<100;i++)
+                {
+                    seqWord = await FindLongestWordSequentialAsync(folder, ctsSuccess.Token);
+                }
                 sw.Stop();
-                Console.WriteLine($"Асинхронный последовательный: {sw.ElapsedMilliseconds} мс, слово \"{seqWord}\"");
+                Console.WriteLine($"Асинхронный последовательный (100 раз): {sw.ElapsedMilliseconds} мс, слово \"{seqWord}\"");
             }
             catch (OperationCanceledException)
             {
                 sw.Stop();
-                Console.WriteLine($"Асинхронный последовательный: Ошибка! Не успел за 10 секунд ({sw.ElapsedMilliseconds} мс)");
+                Console.WriteLine($"Асинхронный последовательный: Отмена на этапе 1 ({sw.ElapsedMilliseconds} мс)");
             }
 
             //Асинхронный параллельный метод (Task.WhenAll)
             sw.Restart();
             try
             {
-                string parWord = await FindLongestWordParallelAsync(folder, ctsSuccess.Token);
+                string parWord = "";
+                for (int i = 0; i < 100; i++)
+                {
+                    parWord = await FindLongestWordParallelAsync(folder, ctsSuccess.Token);//cts..Token - флажок, передаётся в методы
+                }
                 sw.Stop();
-                Console.WriteLine($"Асинхронный параллельный: {sw.ElapsedMilliseconds} мс, слово \"{parWord}\"");
+                Console.WriteLine($"Асинхронный параллельный (100 раз): {sw.ElapsedMilliseconds} мс, слово \"{parWord}\"");
             }
             catch (OperationCanceledException)
             {
                 sw.Stop();
-                Console.WriteLine($"Асинхронный параллельный: Ошибка! Не успел за 10 секунд ({sw.ElapsedMilliseconds} мс)");
+                Console.WriteLine($"Асинхронный параллельный: Отмена на этапе 1 ({sw.ElapsedMilliseconds} мс)");
             }
 
 
@@ -94,17 +106,19 @@ namespace ConsoleApp1
         }
 
         //АСИНХРОННЫЙ ПОСЛЕДОВАТЕЛЬНЫЙ МЕТОД
-        static async Task<string> FindLongestWordSequentialAsync(string folder, CancellationToken token)
+        static async Task<string> FindLongestWordSequentialAsync(string folder, CancellationToken token)//токен отмены
         {
             string overallLongest = "";
             foreach (var file in Directory.GetFiles(folder))
             {
-                token.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested(); 
 
-                await Task.Delay(10, token); //имитация задержки чтения для надежности срабатывания таймаутов
+                string content = await File.ReadAllTextAsync(file, token); //передача токена внутрь
 
-                string content = await
-                    File.ReadAllTextAsync(file, token);
+                //await Task.Delay(10, token); //имитация задержки чтения для надежности срабатывания таймаутов
+
+                //string content = await
+                    //File.ReadAllTextAsync(file, token);
                 string longestInFile = FindLongestWord(content);
 
                 if (longestInFile.Length > overallLongest.Length)
@@ -121,10 +135,10 @@ namespace ConsoleApp1
 
             foreach (var file in files)
             {
-                tasks.Add(ReadFileWithDelayAsync(file, token)); //Метод-обертка, чтобы добавить задержку к каждой параллельной задаче
+                tasks.Add(File.ReadAllTextAsync(file, token)); //Метод-обертка, чтобы добавить задержку к каждой параллельной задаче
             }
 
-            string[] contents = await Task.WhenAll(tasks);
+            string[] contents = await Task.WhenAll(tasks); //ожидает считывание всех файлов вместе
 
             string overallLongest = "";
             foreach (string content in contents)
@@ -137,11 +151,12 @@ namespace ConsoleApp1
         }
 
         //вспомогательный асинхронный метод для имитации задержки при параллельном чтении
-        static async Task<string> ReadFileWithDelayAsync(string path, CancellationToken token)
-        {
-            await Task.Delay(10, token);
-            return await File.ReadAllTextAsync(path, token);
-        }
+
+        //static async Task<string> ReadFileWithDelayAsync(string path, CancellationToken token)
+        //{
+            //await Task.Delay(10, token);
+            //return await File.ReadAllTextAsync(path, token);
+        //}
 
         //ВСПОМОГАТЕЛЬНЫЙ МЕТОД: Поиск самого длинного слова в одной строке текста
         static string FindLongestWord(string text)
