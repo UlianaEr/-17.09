@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Крюкова дз/1.0.0": {
+        "runtime": {
+          "Крюкова дз.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Крюкова дз/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
